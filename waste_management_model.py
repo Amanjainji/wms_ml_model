@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np
+#import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -54,8 +54,6 @@ mae = mean_absolute_error(y_test_reg, y_pred_reg)
 print(f'Classification Model Accuracy: {accuracy * 100:.2f}%')
 print(f'Regression Model MAE: {mae:.2f}')
 
-
-# Define your new test data (Ensure it matches feature order)
 new_data = [[223.06, 27.3, 284.2, 82.0, 36.5, 15.26]]
 
 # Convert new data to DataFrame before transformation
