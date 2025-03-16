@@ -8,9 +8,12 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.cluster import KMeans
 from sklearn.metrics import accuracy_score, mean_absolute_error
 from flask import Flask, request, jsonify
+import folium
+from folium.plugins import HeatMap
 
 # Load dataset
-df = pd.read_excel("smart_bin_map.xlsx")
+df = pd.read_excel("new_bin_map.xlsx")
+df.rename(columns=lambda x: x.strip(), inplace=True)
 
 # Encode categorical variable
 label_encoder = LabelEncoder()
@@ -56,33 +59,37 @@ print(f'Regression MAE: {mae:.2f}')
 kmeans = KMeans(n_clusters=5, random_state=42)
 df['Cluster'] = kmeans.fit_predict(df[['Latitude', 'Longitude']])
 
-# Generate Heatmap
-plt.figure(figsize=(10, 6))
-sns.scatterplot(x=df['Longitude'], y=df['Latitude'], hue=df['Cluster'], palette='coolwarm')
-plt.title('Heatmap of Waste Disposal Trends')
-plt.xlabel('Longitude')
-plt.ylabel('Latitude')
-plt.legend(title='Cluster')
-plt.show()
+# Define high-demand threshold
+fullness_threshold = 75  # Bins filled more than 75%
+collection_threshold = 3  # Bins collected more than 3 times a day
 
-'''
-# Flask API for React Integration
-app = Flask(__name__)
+# Find locations that meet the criteria
+high_demand_bins = df[(df['Fullness (%)'] > fullness_threshold) & 
+                      (df['Collection Frequency'] > collection_threshold)]
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.json['features']
-    scaled_data = scaler.transform([data])
-    bin_status_pred = clf.predict(scaled_data)[0]
-    reg_preds = reg.predict(scaled_data)[0]
-    response = {
-        'Bin Status': int(bin_status_pred),
-        'Total Waste Collected (kg)': reg_preds[0],
-        'Average Collection Rate per Day (kg)': reg_preds[1],
-        'Recycling Rate (%)': reg_preds[2]
-    }
-    return jsonify(response)
+#print(high_demand_bins[['Latitude', 'Longitude']])
 
-if __name__ == '__main__':
-    app.run(debug=True)
-'''
+# Create a map centered around a general location
+m = folium.Map(location=[df["Latitude"].mean(), df["Longitude"].mean()], zoom_start=12)
+
+# Add heatmap layer
+heat_data = list(zip(df["Latitude"], df["Longitude"], df["Fullness (%)"]))
+HeatMap(heat_data).add_to(m)
+
+# Save map to an HTML file
+m.save("waste_heatmap.html")
+
+print("Heatmap saved as waste_heatmap.html. Open this file in a browser to view.")
+
+# Get coordinates of high-demand bins
+coordinates = high_demand_bins[['Latitude', 'Longitude']].values
+
+# Apply K-Means clustering (adjust number of clusters as needed)
+kmeans = KMeans(n_clusters=5, random_state=42)  # Suggesting 5 new locations
+kmeans.fit(coordinates)
+
+# Get new bin placement locations
+new_bin_locations = kmeans.cluster_centers_
+
+print("Suggested locations for new bins:")
+print(new_bin_locations)
